@@ -183,8 +183,10 @@ async function createStake(connection, wallet, walletIndex, tokenMint, amount, p
             })
             .rpc();
         console.log(`钱包 #${walletIndex} 质押 ${amount / 1e9} 代币 成功！ ${tx}`);
+        return true;
     } catch (err) {
         console.error(`钱包 #${walletIndex} 质押失败: ${err}`);
+        return false;
     }
 }
 
@@ -228,11 +230,12 @@ async function generateChildWallets(mnemonic, index) {
 async function transferToken(connection, mainWallet, subWallet, subWalletIndex, tokenMint) {
     const sourceATA = getAssociatedTokenAddressSync(tokenMint, mainWallet.publicKey);
     try {
-        // 生成随机数额 (20000 - 30000 之间，按千取整)
-        const randomAmount = (Math.floor(Math.random() * 11) + 20) * 1000;
-        const destATA = getAssociatedTokenAddressSync(tokenMint, subWallet.publicKey);
+        const minAmount = Math.ceil(config.minAmount / 1000);
+        const maxAmount = Math.floor(config.maxAmount / 1000);
+        const randomAmount = (Math.floor(Math.random() * (maxAmount - minAmount + 1)) + minAmount) * 1000;
 
         const transaction = new Transaction();
+        const destATA = getAssociatedTokenAddressSync(tokenMint, subWallet.publicKey);
         const destAccountInfo = await connection.getAccountInfo(destATA);
         if (!destAccountInfo) {
             transaction.add(
@@ -293,7 +296,19 @@ async function run() {
             process.exit(0);
         }
         await addReferral(connection, wallet, i);
-        await createStake(connection, wallet, i, new PublicKey(config.mintAddress), tokenAmount, 3);
+
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const result = await createStake(connection, wallet, i, new PublicKey(config.mintAddress), tokenAmount, 3);
+            if (result) {
+                break;
+            } else {
+                if (attempt === 2) {
+                    console.error("当天质押额度已满，程序退出");
+                    process.exit(0);
+                }
+                await new Promise(r => setTimeout(r, 2000));
+            }
+        }
         saveCheckpoint(i + 1);
     }
 }
