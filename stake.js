@@ -31,7 +31,7 @@ const config = {
     maxAmount: Number(process.env.MAX_AMOUNT) || 30000,
     childWalletCount: Number(process.env.CHILD_WALLET_COUNT) || 100,
     referralAddress: process.env.REFERRAL_ADDRESS,
-    solPerWallet: Number(process.env.SOL_PER_WALLET) || 0.05,
+    solPerWallet: parseFloat(process.env.SOL_PER_WALLET) || 0.05,
 };
 
 const VELA_PROGRAM_ID = new PublicKey(idl.address);
