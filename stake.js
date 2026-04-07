@@ -30,6 +30,8 @@ const config = {
     minAmount: Number(process.env.MIN_AMOUNT) || 20000,
     maxAmount: Number(process.env.MAX_AMOUNT) || 30000,
     childWalletCount: Number(process.env.CHILD_WALLET_COUNT) || 100,
+    referralAddress: process.env.REFERRAL_ADDRESS,
+    solPerWallet: Number(process.env.SOL_PER_WALLET) || 0.05,
 };
 
 const VELA_PROGRAM_ID = new PublicKey(idl.address);
@@ -109,7 +111,7 @@ async function addReferral(connection, wallet, walletIndex) {
     const [manager] = PublicKey.findProgramAddressSync([REFERRAL_MANAGER_SEED], VELA_PROGRAM_ID);
     const [globalStatePda] = PublicKey.findProgramAddressSync([GLOBAL_STATE_SEED], VELA_PROGRAM_ID);
     const referralFeeWallet = await getReferraFeelWallet(program, globalStatePda);
-    const parentId = await getWalletId(connection, new PublicKey("78BtqU5bT8aJE6qpWtYdbUMjwah6uvxgpwYsnegTErqn"));
+    const parentId = await getWalletId(connection, new PublicKey(config.referralAddress));
     
     try {
         const tx = await program.methods
@@ -188,7 +190,6 @@ async function createStake(connection, wallet, walletIndex, tokenMint, amount, p
 
 //const mnemonic = bip39.generateMnemonic(); 
 //console.log("生成的助记词:", mnemonic);
-//const MY_MNEMONIC = "govern chapter then fabric vessel never torch enhance neck imitate veteran tuition";
 
 const CHECKPOINT_FILE = path.join(__dirname, 'checkpoint.json');
 function getCheckpoint() {
@@ -281,7 +282,7 @@ async function run() {
             SystemProgram.transfer({
                 fromPubkey: mainWallet.publicKey,
                 toPubkey: wallet.publicKey,
-                lamports: 0.05 * LAMPORTS_PER_SOL,
+                lamports: config.solPerWallet * LAMPORTS_PER_SOL,
             })
         );
         await sendAndConfirmTransaction(connection, transaction, [mainWallet]);
